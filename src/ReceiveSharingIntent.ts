@@ -2,7 +2,7 @@ import type {
   IReceiveSharingIntent,
   IUtils,
 } from './ReceiveSharingIntent.interfaces'
-import { Platform, Linking, AppState, NativeModules } from 'react-native'
+import { Platform, Linking, NativeModules } from 'react-native'
 import Utils from './utils'
 
 const { ReceiveSharingIntent } = NativeModules
@@ -32,18 +32,12 @@ class ReceiveSharingIntentModule implements IReceiveSharingIntent {
         }
       })
     } else {
-      AppState.addEventListener('change', (status: string) => {
-        if (status === 'active' && !this.isClear) {
-          this.getFileNames(handler, errorHandler, '')
-        }
-      })
-      if (!this.isClear) this.getFileNames(handler, errorHandler, '')
+      this.getFileNames(handler,errorHandler,'')
     }
   }
 
   clearReceivedFiles () {
-    //this.isClear = true;
-    ReceiveSharingIntent.clearFileNames()
+    this.isClear = true;
   }
 
   protected getFileNames (
