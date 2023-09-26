@@ -2,7 +2,7 @@ import type {
   IReceiveSharingIntent,
   IUtils,
 } from './ReceiveSharingIntent.interfaces'
-import { Platform, Linking, NativeModules } from 'react-native'
+import { Platform, Linking, AppState, NativeModules } from 'react-native'
 import Utils from './utils'
 
 const { ReceiveSharingIntent } = NativeModules
@@ -11,6 +11,7 @@ class ReceiveSharingIntentModule implements IReceiveSharingIntent {
   private isIos: boolean = Platform.OS === 'ios'
   private utils: IUtils = new Utils()
   private isClear: boolean = false
+  private processedIOSFiles: string[] = []
 
   getReceivedFiles (
     handler: Function,
@@ -32,12 +33,18 @@ class ReceiveSharingIntentModule implements IReceiveSharingIntent {
         }
       })
     } else {
-      this.getFileNames(handler,errorHandler,'')
+      AppState.addEventListener('change', (status: string) => {
+        if (status === 'active' && !this.isClear) {
+          this.getFileNames(handler, errorHandler, '')
+        }
+      })
+      if (!this.isClear) this.getFileNames(handler, errorHandler, '')
     }
   }
 
   clearReceivedFiles () {
-    this.isClear = true;
+    // this.isClear = true;
+    ReceiveSharingIntent.clearFileNames()
   }
 
   protected getFileNames (
@@ -49,7 +56,18 @@ class ReceiveSharingIntentModule implements IReceiveSharingIntent {
       ReceiveSharingIntent.getFileNames(url)
         .then((data: any) => {
           let files = this.utils.sortData(data)
-          handler(files)
+
+          // ignore the files already shared/canceled
+          // otherwise, 'getFileNames' method will be returning same data again and again
+          const filesToShare: any = []
+          for (let file of files) {
+            const fileName = file.fileName
+            if (!this.processedIOSFiles.includes(fileName)) {
+              filesToShare.push(file)
+            }
+            this.processedIOSFiles.push(fileName)
+          }
+          handler(filesToShare)
         })
         .catch((e: any) => errorHandler(e))
     } else {
